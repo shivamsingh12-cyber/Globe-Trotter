@@ -65,4 +65,13 @@ export const activityAPI = {
   getCategories: () => api.get('/activities/categories')
 };
 
+// Admin API calls
+export const adminAPI = {
+  getStats: () => api.get('/admin/stats'),
+  getUsers: () => api.get('/admin/users'),
+  updateUser: (id, userData) => api.put(`/admin/users/${id}`, userData),
+  getTrends: () => api.get('/admin/trends'),
+  getPopularActivities: () => api.get('/admin/activities/popular')
+};
+
 export default api;

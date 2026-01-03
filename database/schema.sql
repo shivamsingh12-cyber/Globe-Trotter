@@ -60,6 +60,7 @@ CREATE TABLE trips (
     description TEXT,
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
+    total_cost DECIMAL(10, 2) DEFAULT 0,
     cover_photo VARCHAR(500),
     is_public BOOLEAN DEFAULT FALSE,
     status VARCHAR(20) DEFAULT 'planning',
@@ -76,6 +77,8 @@ CREATE TABLE trip_stops (
     end_date DATE NOT NULL,
     order_index INTEGER NOT NULL,
     notes TEXT,
+    name VARCHAR(200),
+    budget DECIMAL(10, 2) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -151,125 +151,109 @@ const ActivitySearch = () => {
         </div>
       </header>
 
-      <main className="relative z-10 pt-28 pb-12 px-6 max-w-7xl mx-auto">
-        {/* Search & Filter Bar */}
-        <div className="glass-card p-6 rounded-2xl mb-8 border border-white/5">
-          <div className="flex flex-col md:flex-row gap-6 items-center justify-between">
-            {/* Search */}
-            <div className="relative w-full md:w-96">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
-              <input
-                type="text"
-                placeholder="Search adventures, food, culture..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="glass-input w-full pl-12 pr-4 py-3 rounded-xl bg-slate-800/50 border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder-gray-500"
-              />
+      <main className="relative z-10 pt-28 pb-12 px-6 max-w-5xl mx-auto">
+        {/* Search & Control Bar */}
+        <div className="flex flex-col md:flex-row gap-4 mb-8">
+          {/* Search Input */}
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              placeholder="Paragliding, Scuba Diving..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full glass-input bg-white/5 border border-white/20 rounded-xl px-4 py-3 pl-12 text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500 transition-all font-medium"
+            />
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
+            <button className="glass-card px-4 py-3 rounded-xl border border-white/20 hover:bg-white/10 transition-colors text-sm font-bold text-white whitespace-nowrap flex items-center gap-2">
+              Group by <span className="text-gray-400 text-xs">▼</span>
+            </button>
+            <div className="relative group">
+              <button className="glass-card px-4 py-3 rounded-xl border border-white/20 hover:bg-white/10 transition-colors text-sm font-bold text-white whitespace-nowrap flex items-center gap-2">
+                Filter <span className="text-gray-400 text-xs">▼</span>
+              </button>
+              {/* Dropdown for filters could go here */}
             </div>
 
-            {/* Quick Categories */}
-            <div className="flex overflow-x-auto gap-2 max-w-full pb-2 md:pb-0 no-scrollbar">
-              {categories.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all ${activeCategory === cat
-                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/25'
-                    : 'bg-slate-800 text-gray-400 hover:bg-slate-700 hover:text-white'
-                    }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-
-            {/* Sort & Price */}
-            <div className="flex items-center gap-4 w-full md:w-auto">
-              <div className="flex flex-col w-32">
-                <label className="text-xs text-gray-400 mb-1">Max Cost: ${priceRange}</label>
-                <input
-                  type="range"
-                  min="0"
-                  max="500"
-                  step="10"
-                  value={priceRange}
-                  onChange={(e) => setPriceRange(Number(e.target.value))}
-                  className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                />
-              </div>
+            <div className="relative">
               <select
                 value={filters.sortBy}
                 onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
-                className="glass-input px-4 py-2 rounded-xl bg-slate-800/50 border border-gray-700 focus:border-blue-500 outline-none text-sm text-gray-300"
+                className="glass-card px-4 py-3 rounded-xl border border-white/20 hover:bg-white/10 transition-colors text-sm font-bold text-white whitespace-nowrap appearance-none pr-8 cursor-pointer bg-transparent focus:bg-slate-800"
               >
-                <option value="popularity">Popularity</option>
-                <option value="cost_low">Price: Low to High</option>
-                <option value="cost_high">Price: High to Low</option>
-                <option value="duration">Duration</option>
+                <option value="popularity">Sort by: Popularity</option>
+                <option value="cost_low">Sort by: Price (Low)</option>
+                <option value="cost_high">Sort by: Price (High)</option>
+                <option value="duration">Sort by: Duration</option>
               </select>
             </div>
           </div>
         </div>
 
-        {/* Results Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Categories Pills (Optional - kept for usability but styled minimally) */}
+        <div className="flex gap-2 overflow-x-auto pb-4 mb-4 no-scrollbar opacity-80 hover:opacity-100 transition-opacity">
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border ${activeCategory === cat ? 'bg-white text-black border-white' : 'bg-transparent text-gray-400 border-gray-600 hover:border-gray-400'}`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        {/* Results List (Vertical) */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold text-white mb-4">Results</h2>
           {filteredActivities.length > 0 ? (
             filteredActivities.map((activity) => (
-              <div key={activity.id} className="group relative glass-card rounded-2xl overflow-hidden hover:border-blue-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/10">
-                {/* Image Section */}
-                <div className="h-48 overflow-hidden relative">
+              <div key={activity.id} className="glass-card p-4 rounded-xl border border-white/10 hover:border-indigo-500/50 hover:bg-white/5 transition-all group flex flex-col md:flex-row gap-6">
+
+                {/* Image Thumbnail */}
+                <div className="w-full md:w-48 h-32 flex-shrink-0 rounded-lg overflow-hidden relative bg-slate-800">
                   <img
-                    src={activity.image_url || `https://source.unsplash.com/random/800x600/?${activity.category},${activity.name}`}
+                    src={activity.image_url || `https://source.unsplash.com/random/400x300/?${activity.category},${activity.name}`}
                     alt={activity.name}
-                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-80"></div>
-                  <div className="absolute top-4 right-4 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-xs font-medium text-white">
-                    {activity.category}
-                  </div>
-                  <div className="absolute bottom-4 left-4">
-                    <h3 className="text-xl font-bold text-white shadow-black drop-shadow-lg">{activity.name}</h3>
-                  </div>
                 </div>
 
-                {/* Content Section */}
-                <div className="p-5">
-                  {activity.description && (
-                    <p className="text-gray-400 text-sm mb-4 line-clamp-2 h-10">{activity.description}</p>
-                  )}
-
-                  <div className="flex items-center justify-between border-t border-white/5 pt-4">
-                    <div className="flex flex-col">
-                      <span className="text-xs text-gray-500 uppercase tracking-widest">Cost</span>
-                      <span className="text-lg font-bold text-green-400">
-                        {parseFloat(activity.cost) === 0 ? 'Free' : `$${parseFloat(activity.cost)}`}
-                      </span>
+                {/* Content */}
+                <div className="flex-1 flex flex-col justify-between">
+                  <div>
+                    <div className="flex justify-between items-start">
+                      <h3 className="text-xl font-bold text-white mb-1 group-hover:text-indigo-300 transition-colors">{activity.name}</h3>
+                      <span className="text-lg font-bold text-emerald-400">${parseFloat(activity.cost)}</span>
                     </div>
-                    <div className="flex flex-col items-end">
-                      <span className="text-xs text-gray-500 uppercase tracking-widest">Duration</span>
-                      <span className="text-sm text-gray-300">
-                        {activity.duration ? `${Math.floor(activity.duration / 60)}h ${activity.duration % 60}m` : 'Flexible'}
-                      </span>
+                    <p className="text-gray-400 text-sm line-clamp-2 mb-3 max-w-2xl">{activity.description || 'Experience this amazing activity with professional guides and unforgettable views.'}</p>
+
+                    <div className="flex flex-wrap gap-4 text-xs text-gray-500 uppercase tracking-wider font-semibold">
+                      <span className="flex items-center gap-1">⏱ {Math.floor(activity.duration / 60)}h {activity.duration % 60}m</span>
+                      <span className="flex items-center gap-1">🏷 {activity.category}</span>
+                      <span className="flex items-center gap-1">⭐ {activity.rating || 'New'}</span>
                     </div>
                   </div>
 
-                  {/* Action Button */}
-                  {tripId && stopId && (
-                    <button
-                      onClick={() => handleAddToStop(activity.id)}
-                      className="w-full mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium py-3 rounded-xl shadow-lg shadow-blue-500/20 transform active:scale-95 transition-all text-sm flex items-center justify-center gap-2"
-                    >
-                      <span>+</span> Add to Itinerary
-                    </button>
-                  )}
+                  <div className="mt-4 md:mt-0 flex justify-end">
+                    {tripId && stopId && (
+                      <button
+                        onClick={() => handleAddToStop(activity.id)}
+                        className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-lg shadow-lg shadow-indigo-500/20 transition-all transform active:scale-95"
+                      >
+                        + Add to Itinerary
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))
           ) : (
-            <div className="col-span-full py-20 text-center">
-              <div className="text-6xl mb-4 opacity-50">🔭</div>
-              <h3 className="text-2xl font-bold text-gray-300 mb-2">No activities found</h3>
-              <p className="text-gray-500">Try adjusting your filters or price range</p>
+            <div className="border border-dashed border-gray-700 rounded-xl p-12 text-center">
+              <p className="text-gray-500">No activities found matching your criteria.</p>
             </div>
           )}
         </div>

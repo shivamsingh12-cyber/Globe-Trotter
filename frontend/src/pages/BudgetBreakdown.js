@@ -16,7 +16,7 @@ const BudgetBreakdown = () => {
       // Fetch Trip Details (Stops contain activities and city info)
       const tripResponse = await api.get(`/trips/${tripId}`);
       setTrip(tripResponse.data.trip);
-      setStops(tripResponse.data.stops || []);
+      setStops(tripResponse.data.trip.stops || []);
 
       // Fetch Budget Breakdown (Expenses table)
       try {
@@ -76,7 +76,7 @@ const BudgetBreakdown = () => {
     return diff > 0 ? diff + 1 : 1;
   };
 
-  const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#6B7280'];
+  const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#6B7280', '#06B6D4', '#E11D48', '#84CC16', '#7C3AED'];
 
   if (loading) {
     return (
@@ -121,19 +121,18 @@ const BudgetBreakdown = () => {
     }
   }
 
-  let sectionImpliedCost = 0;
   stops.forEach(stop => {
     if (stop.budget && parseFloat(stop.budget) > 0) {
       const actsCost = (stop.activities || []).reduce((sum, act) => sum + (parseFloat(act.cost) || 0), 0);
       if (parseFloat(stop.budget) > actsCost) {
-        sectionImpliedCost += (parseFloat(stop.budget) - actsCost);
+        const remainingBudget = parseFloat(stop.budget) - actsCost;
+        pieData.push({
+          name: stop.name || stop.city_name || 'Section',
+          value: remainingBudget
+        });
       }
     }
   });
-
-  if (sectionImpliedCost > 0) {
-    pieData.push({ name: 'Planned Sections', value: sectionImpliedCost });
-  }
 
   return (
     <div className="min-h-screen bg-slate-900 text-white font-sans selection:bg-blue-500/30">

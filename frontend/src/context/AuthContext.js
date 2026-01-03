@@ -24,16 +24,16 @@ export const AuthProvider = ({ children }) => {
       axios.get(`${API_URL}/auth/profile`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      .then(response => {
-        setUser(response.data.user);
-        setLoading(false);
-      })
-      .catch(error => {
-        console.error('Token verification failed:', error);
-        localStorage.removeItem('token');
-        setToken(null);
-        setLoading(false);
-      });
+        .then(response => {
+          setUser(response.data.user);
+          setLoading(false);
+        })
+        .catch(error => {
+          console.error('Token verification failed:', error);
+          localStorage.removeItem('token');
+          setToken(null);
+          setLoading(false);
+        });
     } else {
       setLoading(false);
     }
@@ -45,13 +45,13 @@ export const AuthProvider = ({ children }) => {
         email,
         password
       });
-      
+
       const { token: newToken, user: userData } = response.data;
       localStorage.setItem('token', newToken);
       setToken(newToken);
       setUser(userData);
-      
-      return { success: true };
+
+      return { success: true, user: userData };
     } catch (error) {
       return {
         success: false,
@@ -63,12 +63,12 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       const response = await axios.post(`${API_URL}/auth/register`, userData);
-      
+
       const { token: newToken, user: newUser } = response.data;
       localStorage.setItem('token', newToken);
       setToken(newToken);
       setUser(newUser);
-      
+
       return { success: true };
     } catch (error) {
       return {
@@ -89,7 +89,7 @@ export const AuthProvider = ({ children }) => {
       const response = await axios.put(`${API_URL}/auth/profile`, profileData, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       setUser(response.data.user);
       return { success: true };
     } catch (error) {

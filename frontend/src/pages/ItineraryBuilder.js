@@ -5,11 +5,13 @@ import api from '../services/api';
 const ItineraryBuilder = () => {
   const { tripId } = useParams();
   const navigate = useNavigate();
-  // Removed unused 'trip' state
   const [stops, setStops] = useState([]);
   const [cities, setCities] = useState([]); // List of available cities for dropdown
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Track edits locally before saving
+  const [editingStops, setEditingStops] = useState({});
 
   // Modals state
   const [showAddStop, setShowAddStop] = useState(false);
@@ -29,8 +31,7 @@ const ItineraryBuilder = () => {
   const fetchTripData = useCallback(async () => {
     try {
       const response = await api.get(`/trips/${tripId}`);
-      // setTrip(response.data.trip); // removed unused trip state
-      setStops(response.data.stops || []);
+      setStops(response.data.trip.stops || []);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching trip:', error);
@@ -41,7 +42,6 @@ const ItineraryBuilder = () => {
   const fetchCities = useCallback(async () => {
     try {
       const response = await api.get('/cities');
-      // Handle various response structures robustly
       let citiesData = [];
       if (response.data && Array.isArray(response.data.cities)) {
         citiesData = response.data.cities;
@@ -76,17 +76,22 @@ const ItineraryBuilder = () => {
         ...newStop,
         order_index: stops.length
       });
-      // Handle potential response structure differences
-      const addedStop = response.data.stop || response.data;
 
-      // Optimistically update list without re-fetching immediately to avoid flicker
+      // Immediately update UI with the new section
+      const addedStopRaw = response.data.stop || response.data;
+      // Enrich with city name if possible, to avoid blank location name
+      const city = cities.find(c => c.id === parseInt(newStop.city_id));
+      const addedStop = { ...addedStopRaw, city_name: city ? city.name : '' };
+
       setStops(prevStops => [...prevStops, addedStop]);
 
       setShowAddStop(false);
       setNewStop({ city_id: '', name: '', budget: '', start_date: '', end_date: '', notes: '' });
 
+      setNewStop({ city_id: '', name: '', budget: '', start_date: '', end_date: '', notes: '' });
     } catch (error) {
       console.error('Error adding section:', error);
+      alert("Failed to add section. Please try again.");
     }
   };
 
@@ -94,9 +99,17 @@ const ItineraryBuilder = () => {
     if (window.confirm('Are you sure you want to delete this section?')) {
       try {
         await api.delete(`/trips/${tripId}/stops/${stopId}`);
+        // Immediately remove from UI
         setStops(prevStops => prevStops.filter(s => s.id !== stopId));
+        // Also clear from edit state if it exists
+        setEditingStops(prev => {
+          const newState = { ...prev };
+          delete newState[stopId];
+          return newState;
+        });
       } catch (error) {
         console.error('Error deleting stop:', error);
+        alert("Failed to delete section.");
       }
     }
   };
@@ -107,26 +120,63 @@ const ItineraryBuilder = () => {
       await api.post(`/trips/${tripId}/stops/${selectedStop.id}/activities`, {
         activity_id: activityId
       });
-      fetchTripData(); // Refresh to see new budget/activities (activities need join data usually, or just refetch)
+      fetchTripData();
       setShowAddActivity(false);
+      alert("Activity added!");
     } catch (error) {
       console.error('Error adding activity:', error);
+      alert("Failed to add activity.");
     }
   };
 
-  const getCityDetails = (cityId) => {
-    if (!cities.length) return {};
-    return cities.find(c => c.id === parseInt(cityId)) || {};
+  // Handle local edits
+  const handleStopChange = (stopId, field, value) => {
+    setEditingStops(prev => ({
+      ...prev,
+      [stopId]: {
+        ...stops.find(s => s.id === stopId),
+        ...(prev[stopId] || {}),
+        [field]: value
+      }
+    }));
   };
 
-  // Budget is now explicitly set OR calculated
-  const getSectionBudget = (stop) => {
-    if (stop.budget && parseFloat(stop.budget) > 0) {
-      return parseFloat(stop.budget);
+  const handleSaveStop = async (stopId) => {
+    const updatedData = editingStops[stopId];
+    if (!updatedData) {
+      // Even if no changes, maybe user clicked save just to be sure.
+      return;
     }
-    // Fallback if manual budget is 0
-    if (!stop.activities) return 0;
-    return stop.activities.reduce((sum, act) => sum + (parseFloat(act.cost) || 0), 0);
+
+    try {
+      await api.put(`/trips/${tripId}/stops/${stopId}`, updatedData);
+      // Clear dirty state for this stop
+      setEditingStops(prev => {
+        const newState = { ...prev };
+        delete newState[stopId];
+        return newState;
+      });
+      fetchTripData();
+      alert("Section saved successfully! ✅");
+    } catch (error) {
+      console.error("Failed to save stop", error);
+      alert("Failed to save changes. ❌");
+    }
+  };
+
+  // Helper to retrieve display value (edit state OR prop)
+  const getStopValue = (stop, field) => {
+    // If we have a pending edit, return that. Otherwise return persistent data.
+    if (editingStops[stop.id] && editingStops[stop.id][field] !== undefined) {
+      return editingStops[stop.id][field];
+    }
+    // Handle date formatting for inputs
+    if (field === 'start_date' || field === 'end_date') {
+      const val = stop[field];
+      if (!val) return '';
+      return val.split('T')[0]; // Format for date input
+    }
+    return stop[field] || '';
   };
 
   if (loading) {
@@ -145,22 +195,22 @@ const ItineraryBuilder = () => {
         <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[120px]"></div>
       </div>
 
-      {/* Header - Matching Wireframe "GlobalTrotter" style */}
+      {/* Header */}
       <header className="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-indigo-500/20">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
               <span className="text-sm">🌍</span>
             </div>
-            <h1 className="text-xl font-bold text-white">GlobeTrotter</h1>
+            <h1 className="text-xl font-bold text-white">GlobeTrotter Builder</h1>
           </div>
 
           <div className="flex items-center gap-4">
             <button
-              onClick={() => navigate('/dashboard')}
-              className="hidden md:flex items-center gap-2 px-3 py-1.5 hover:bg-white/10 rounded-md transition-colors text-gray-400 text-sm"
+              onClick={() => navigate(`/itinerary/${tripId}`)}
+              className="hidden md:flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-full transition-colors text-white font-semibold text-sm shadow-lg shadow-indigo-600/30"
             >
-              Done
+              Finish & View Itinerary
             </button>
             <div className="w-8 h-8 rounded-full bg-indigo-500/20 border border-indigo-500/50 flex items-center justify-center text-white text-sm cursor-default">
               👤
@@ -181,59 +231,106 @@ const ItineraryBuilder = () => {
           )}
 
           {stops.map((stop, index) => {
-            const city = getCityDetails(stop.city_id);
-            const cityName = city.name || 'Unknown Location';
-            const title = stop.name || cityName; // Use custom title if available
+            const isDirty = !!editingStops[stop.id];
 
             return (
-              <div key={stop.id} className="glass-card rounded-xl border border-white/10 p-6 shadow-lg hover:border-indigo-500/30 transition-all group">
-                {/* Section Title */}
-                <div className="mb-4">
-                  <div className="flex justify-between items-start">
-                    <h3 className="text-lg font-semibold text-white">Section {index + 1}: {title}</h3>
-                    <button
-                      onClick={() => handleDeleteStop(stop.id)}
-                      className="text-gray-500 hover:text-red-400 transition-colors"
-                      title="Delete Section"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  <p className="text-gray-400 text-sm mt-1">
-                    {stop.notes || "All the necessary information about this section. This can be anything like travel section, hotel or any other activity."}
-                  </p>
-                </div>
+              <div key={stop.id} className={`glass-card rounded-xl border ${isDirty ? 'border-yellow-500/50' : 'border-white/10'} p-6 shadow-lg transition-all group`}>
 
-                {/* Badges / Buttons Row */}
-                <div className="flex flex-wrap gap-4 mb-6">
-                  <div className="bg-slate-800 border border-white/10 px-4 py-3 rounded-lg text-sm text-gray-300 min-w-[200px] text-center">
-                    Date Range: {stop.start_date ? new Date(stop.start_date).toLocaleDateString() : 'xxx'} to {stop.end_date ? new Date(stop.end_date).toLocaleDateString() : 'yyy'}
+                {/* Editable Header */}
+                <div className="mb-6 flex justify-between items-start gap-4">
+                  <div className="flex-1">
+                    <label className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1 block">Section Title</label>
+                    <input
+                      className="bg-transparent border-b border-gray-600 focus:border-indigo-500 w-full text-xl font-bold text-white focus:outline-none pb-1"
+                      value={getStopValue(stop, 'name')}
+                      placeholder="e.g. Arrival in Paris"
+                      onChange={(e) => handleStopChange(stop.id, 'name', e.target.value)}
+                    />
                   </div>
-                  <div className="bg-slate-800 border border-white/10 px-4 py-3 rounded-lg text-sm text-gray-300 min-w-[200px] text-center">
-                    Budget of this section: ${getSectionBudget(stop).toFixed(2)}
-                  </div>
-                </div>
-
-                {/* Activities Preview (Optional, to show content acts as 'necessary info') */}
-                <div className="space-y-2">
-                  {stop.activities && stop.activities.map(act => (
-                    <div key={act.id} className="flex justify-between items-center text-sm text-gray-400 pl-2 border-l-2 border-indigo-500/30">
-                      <span>{act.name}</span>
-                      <span className="text-green-400">${act.cost}</span>
-                    </div>
-                  ))}
-
                   <button
-                    onClick={() => {
-                      setSelectedStop(stop);
-                      fetchActivities(stop.city_id);
-                      setShowAddActivity(true);
-                    }}
-                    className="text-xs text-indigo-400 hover:text-indigo-300 mt-2 font-medium"
+                    onClick={() => handleDeleteStop(stop.id)}
+                    className="text-gray-600 hover:text-red-400 p-2 rounded-full hover:bg-white/5 transition-colors"
+                    title="Delete Section"
                   >
-                    + Add / Manage Activities (Optional)
+                    ✕
                   </button>
                 </div>
+
+                {/* Editable Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div>
+                    <label className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1 block">Date Range</label>
+                    <div className="flex gap-2">
+                      <input type="date"
+                        className="bg-slate-800/50 border border-gray-700 rounded-lg px-3 py-2 text-sm w-full text-white focus:border-indigo-500 focus:outline-none [color-scheme:dark]"
+                        value={getStopValue(stop, 'start_date')}
+                        onChange={(e) => handleStopChange(stop.id, 'start_date', e.target.value)}
+                      />
+                      <input type="date"
+                        className="bg-slate-800/50 border border-gray-700 rounded-lg px-3 py-2 text-sm w-full text-white focus:border-indigo-500 focus:outline-none [color-scheme:dark]"
+                        value={getStopValue(stop, 'end_date')}
+                        onChange={(e) => handleStopChange(stop.id, 'end_date', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1 block">Budget ($)</label>
+                    <input type="number"
+                      className="bg-slate-800/50 border border-gray-700 rounded-lg px-3 py-2 text-sm w-full text-white focus:border-indigo-500 focus:outline-none"
+                      value={getStopValue(stop, 'budget')}
+                      onChange={(e) => handleStopChange(stop.id, 'budget', e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <label className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1 block">Notes / Description</label>
+                  <textarea
+                    className="w-full bg-slate-800/50 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 focus:border-indigo-500 focus:outline-none min-h-[80px]"
+                    value={getStopValue(stop, 'notes')}
+                    onChange={(e) => handleStopChange(stop.id, 'notes', e.target.value)}
+                    placeholder="Add details about this section..."
+                  />
+                </div>
+
+                {/* Activities & Save Row */}
+                <div className="flex flex-col md:flex-row justify-between items-end gap-4 border-t border-white/5 pt-4">
+                  <div className="w-full md:w-auto">
+                    <h5 className="text-xs font-bold text-gray-500 uppercase mb-2">Activities ({stop.activities?.length || 0})</h5>
+                    <div className="space-y-1 mb-2">
+                      {stop.activities && stop.activities.map(act => (
+                        <div key={act.id} className="text-xs text-indigo-300 flex justify-between w-full md:w-[200px]">
+                          <span>• {act.name}</span>
+                          <span>${act.cost}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedStop(stop);
+                        fetchActivities(stop.city_id); // Assuming city_id is still on stop object
+                        setShowAddActivity(true);
+                      }}
+                      className="text-xs text-indigo-400 hover:text-white font-medium flex items-center gap-1"
+                    >
+                      + Add Activity
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => handleSaveStop(stop.id)}
+                    disabled={!isDirty}
+                    className={`px-6 py-2.5 rounded-lg text-sm font-bold shadow-lg transition-all flex items-center gap-2
+                            ${isDirty
+                        ? 'bg-green-500 hover:bg-green-600 text-white shadow-green-500/20 translate-y-0 opacity-100'
+                        : 'bg-slate-700 text-gray-400 cursor-not-allowed opacity-50'
+                      }`}
+                  >
+                    {isDirty ? '💾 Save Changes' : 'Saved'}
+                  </button>
+                </div>
+
               </div>
             );
           })}
@@ -243,7 +340,7 @@ const ItineraryBuilder = () => {
             onClick={() => setShowAddStop(true)}
             className="w-full py-4 border border-white/20 rounded-xl flex items-center justify-center gap-2 text-white hover:bg-white/5 transition-colors font-medium text-lg"
           >
-            <span className="text-xl">+</span> Add another Section
+            <span className="text-2xl">+</span> Add another Section
           </button>
 
         </div>
@@ -255,29 +352,27 @@ const ItineraryBuilder = () => {
       {showAddStop && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
           <div className="bg-slate-900 w-full max-w-md rounded-2xl p-6 shadow-2xl border border-gray-700">
-            <h3 className="text-xl font-bold mb-6 text-white border-b border-gray-800 pb-2">Add Section</h3>
+            <h3 className="text-xl font-bold mb-6 text-white border-b border-gray-800 pb-2">Add New Section</h3>
             <form onSubmit={handleAddStop} className="space-y-4">
 
-              {/* Section Title (Travel, Hotel, etc.) */}
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1">Section Title</label>
                 <input
                   type="text"
                   value={newStop.name}
                   onChange={(e) => setNewStop({ ...newStop, name: e.target.value })}
-                  className="w-full bg-slate-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
-                  placeholder="e.g. Travel to Paris, Hotel Check-in, City Tour"
+                  className="w-full bg-slate-800 border border-gray-700 rounded-lg px-4 py-2 text-white outline-none focus:border-indigo-500"
+                  placeholder="e.g. Flight to Paris"
                   required
                 />
               </div>
 
-              {/* Location Selection (Required for logic, but can be secondary visually) */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Location / City</label>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Location</label>
                 <select
                   value={newStop.city_id}
                   onChange={(e) => setNewStop({ ...newStop, city_id: e.target.value })}
-                  className="w-full bg-slate-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-800 border border-gray-700 rounded-lg px-4 py-2 text-white outline-none focus:border-indigo-500"
                   required
                 >
                   <option value="">Choose a destination...</option>
@@ -287,7 +382,6 @@ const ItineraryBuilder = () => {
                 </select>
               </div>
 
-              {/* Date Range */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-1">Start Date</label>
@@ -311,26 +405,24 @@ const ItineraryBuilder = () => {
                 </div>
               </div>
 
-              {/* Budget */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Budget for this Section ($)</label>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Budget ($)</label>
                 <input
                   type="number"
                   value={newStop.budget}
                   onChange={(e) => setNewStop({ ...newStop, budget: e.target.value })}
-                  className="w-full bg-slate-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-600"
+                  className="w-full bg-slate-800 border border-gray-700 rounded-lg px-4 py-2 text-white outline-none focus:border-indigo-500"
                   placeholder="0.00"
                 />
               </div>
 
-              {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Description / Notes</label>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Notes</label>
                 <textarea
                   value={newStop.notes}
                   onChange={(e) => setNewStop({ ...newStop, notes: e.target.value })}
-                  className="w-full bg-slate-800 border border-gray-700 rounded-lg px-4 py-2 text-white h-20 resize-none"
-                  placeholder="Details regarding this section..."
+                  className="w-full bg-slate-800 border border-gray-700 rounded-lg px-4 py-2 text-white h-20 resize-none outline-none focus:border-indigo-500"
+                  placeholder="Details..."
                 />
               </div>
 
@@ -346,7 +438,7 @@ const ItineraryBuilder = () => {
                   type="submit"
                   className="flex-1 py-3 bg-white text-black hover:bg-gray-200 rounded-xl text-sm font-bold transition-colors"
                 >
-                  Add
+                  Create Section
                 </button>
               </div>
             </form>

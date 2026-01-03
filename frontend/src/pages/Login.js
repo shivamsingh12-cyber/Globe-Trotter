@@ -28,7 +28,11 @@ const Login = () => {
     const result = await login(formData.email, formData.password);
 
     if (result.success) {
-      navigate('/dashboard');
+      if (result.user && result.user.is_admin) {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
     } else {
       setError(result.error);
       setLoading(false);

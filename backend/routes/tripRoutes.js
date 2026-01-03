@@ -7,6 +7,7 @@ const {
   updateTrip,
   deleteTrip,
   addTripStop,
+  updateTripStop,
   deleteTripStop,
   addStopActivity,
   getTripBudget
@@ -28,6 +29,7 @@ router.delete('/:id', deleteTrip);
 
 // Trip stops and activities
 router.post('/:id/stops', addTripStop);
+router.put('/:id/stops/:stopId', updateTripStop);
 router.delete('/:id/stops/:stopId', deleteTripStop);
 router.post('/:id/stops/:stopId/activities', addStopActivity);
 

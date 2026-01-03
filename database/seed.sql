@@ -83,6 +83,27 @@ INSERT INTO activities (name, city_id, category, cost, duration, description, im
 ('Wat Arun Temple', 8, 'Culture', 3.00, 60, 'Visit the Temple of Dawn', 'https://images.unsplash.com/photo-1563492065599-3520f775eeed');
 
 -- Create a demo user (password: demo123)
+-- Admin password is admin@1234
 INSERT INTO users (email, password_hash, first_name, last_name, phone, city, country, is_admin) VALUES
-('demo@globetrotter.com', '$2b$10$rKvVLZ8Z8Z8Z8Z8Z8Z8Z8uXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXx', 'Demo', 'User', '+1234567890', 'New York', 'USA', false),
-('admin@globetrotter.com', '$2b$10$rKvVLZ8Z8Z8Z8Z8Z8Z8Z8uXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXx', 'Admin', 'User', '+1234567890', 'San Francisco', 'USA', true);
+('demo@globetrotter.com', '$2b$10$MFx/5XWXB9TOFbmwFGlO8exghI9b56xcB6dPDOz5CC88sTWtVhuL.', 'Demo', 'User', '+1234567890', 'New York', 'USA', false),
+('admin@globetrotter.com', '$2b$10$MFx/5XWXB9TOFbmwFGlO8exghI9b56xcB6dPDOz5CC88sTWtVhuL.', 'Admin', 'User', '+1234567890', 'San Francisco', 'USA', true);
+
+-- Insert some sample trips to link activities
+INSERT INTO trips (user_id, name, start_date, end_date, total_cost, status) VALUES 
+((SELECT id FROM users WHERE email = 'demo@globetrotter.com'), 'Paris Getaway', CURRENT_DATE + INTERVAL '10 days', CURRENT_DATE + INTERVAL '15 days', 2500.00, 'planning'),
+((SELECT id FROM users WHERE email = 'demo@globetrotter.com'), 'Tokyo Adventure', CURRENT_DATE + INTERVAL '30 days', CURRENT_DATE + INTERVAL '40 days', 4500.00, 'planning');
+
+-- Insert trip stops
+INSERT INTO trip_stops (trip_id, city_id, start_date, end_date, budget, name, order_index) VALUES
+((SELECT id FROM trips WHERE name = 'Paris Getaway'), (SELECT id FROM cities WHERE name = 'Paris'), CURRENT_DATE + INTERVAL '10 days', CURRENT_DATE + INTERVAL '15 days', 1000.00, 'Paris Leg', 1),
+((SELECT id FROM trips WHERE name = 'Tokyo Adventure'), (SELECT id FROM cities WHERE name = 'Tokyo'), CURRENT_DATE + INTERVAL '30 days', CURRENT_DATE + INTERVAL '40 days', 2000.00, 'Tokyo Leg', 1);
+
+-- Insert stop activities (This populates the Popular Activities chart)
+INSERT INTO stop_activities (stop_id, activity_id, cost) VALUES
+-- Paris Activities
+((SELECT id FROM trip_stops WHERE name = 'Paris Leg'), (SELECT id FROM activities WHERE name = 'Eiffel Tower Visit'), 25.00),
+((SELECT id FROM trip_stops WHERE name = 'Paris Leg'), (SELECT id FROM activities WHERE name = 'Louvre Museum Tour'), 17.00),
+((SELECT id FROM trip_stops WHERE name = 'Paris Leg'), (SELECT id FROM activities WHERE name = 'Seine River Cruise'), 15.00),
+-- Tokyo Activities
+((SELECT id FROM trip_stops WHERE name = 'Tokyo Leg'), (SELECT id FROM activities WHERE name = 'Senso-ji Temple Visit'), 0.00),
+((SELECT id FROM trip_stops WHERE name = 'Tokyo Leg'), (SELECT id FROM activities WHERE name = 'Sushi Making Class'), 75.00);

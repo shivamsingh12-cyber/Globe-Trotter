@@ -21,7 +21,7 @@ import BudgetBreakdown from './pages/BudgetBreakdown';
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -29,18 +29,18 @@ const ProtectedRoute = ({ children }) => {
       </div>
     );
   }
-  
+
   if (!user) {
     return <Navigate to="/login" replace />;
   }
-  
+
   return children;
 };
 
-// Public Route Component (redirects to dashboard if logged in)
+// Public Route Component (redirects to home/admin if logged in)
 const PublicRoute = ({ children }) => {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -48,11 +48,14 @@ const PublicRoute = ({ children }) => {
       </div>
     );
   }
-  
+
   if (user) {
+    if (user.is_admin) {
+      return <Navigate to="/admin" replace />;
+    }
     return <Navigate to="/dashboard" replace />;
   }
-  
+
   return children;
 };
 
@@ -60,143 +63,143 @@ function AppRoutes() {
   return (
     <Routes>
       {/* Public Routes */}
-      <Route 
-        path="/login" 
+      <Route
+        path="/login"
         element={
           <PublicRoute>
             <Login />
           </PublicRoute>
-        } 
+        }
       />
-      <Route 
-        path="/register" 
+      <Route
+        path="/register"
         element={
           <PublicRoute>
             <Register />
           </PublicRoute>
-        } 
+        }
       />
-      
+
       {/* Protected Routes */}
-      <Route 
-        path="/dashboard" 
+      <Route
+        path="/dashboard"
         element={
           <ProtectedRoute>
             <Dashboard />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/create-trip" 
+      <Route
+        path="/create-trip"
         element={
           <ProtectedRoute>
             <CreateTrip />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/my-trips" 
+      <Route
+        path="/my-trips"
         element={
           <ProtectedRoute>
             <MyTrips />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/itinerary/:tripId" 
+      <Route
+        path="/itinerary/:tripId"
         element={
           <ProtectedRoute>
             <ItineraryView />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/itinerary/:tripId/edit" 
+      <Route
+        path="/itinerary/:tripId/edit"
         element={
           <ProtectedRoute>
             <ItineraryBuilder />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/trip/:tripId" 
+      <Route
+        path="/trip/:tripId"
         element={
           <ProtectedRoute>
             <ItineraryView />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/budget/:tripId" 
+      <Route
+        path="/budget/:tripId"
         element={
           <ProtectedRoute>
             <BudgetBreakdown />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/cities" 
+      <Route
+        path="/cities"
         element={
           <ProtectedRoute>
             <CitySearch />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/activities" 
+      <Route
+        path="/activities"
         element={
           <ProtectedRoute>
             <ActivitySearch />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/profile" 
+      <Route
+        path="/profile"
         element={
           <ProtectedRoute>
             <UserProfile />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/community" 
+      <Route
+        path="/community"
         element={
           <ProtectedRoute>
             <Community />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/calendar" 
+      <Route
+        path="/calendar"
         element={
           <ProtectedRoute>
             <CalendarView />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/calendar/:tripId" 
+      <Route
+        path="/calendar/:tripId"
         element={
           <ProtectedRoute>
             <CalendarView />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/admin" 
+      <Route
+        path="/admin"
         element={
           <ProtectedRoute>
             <AdminDashboard />
           </ProtectedRoute>
-        } 
+        }
       />
-      
+
       {/* Public Trip View (for shared trips) */}
       <Route path="/trip/:tripId/public" element={<ItineraryView />} />
-      
+
       {/* Default redirect */}
       <Route path="/" element={<Navigate to="/login" replace />} />
-      
+
       {/* 404 - Redirect to dashboard or login */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

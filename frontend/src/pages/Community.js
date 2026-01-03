@@ -1,198 +1,174 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
 
 const Community = () => {
   const navigate = useNavigate();
-  const [publicTrips, setPublicTrips] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState({
-    sortBy: 'recent'
+  const [sortBy, setSortBy] = useState('newest');
+  const [showPostModal, setShowPostModal] = useState(false);
+
+  // Load posts from localStorage or use defaults (Simulating "Real" persistence)
+  const [posts, setPosts] = useState(() => {
+    const saved = localStorage.getItem('community_posts');
+    if (saved) return JSON.parse(saved);
+    return [
+      {
+        id: 1,
+        title: 'My trip to Paris!',
+        author: 'Sarah J.',
+        avatar: '', // Empty will show placeholder
+        likes: 12,
+        comments: 4,
+        date: '2025-01-02',
+        excerpt: 'Had a wonderful time seeing the Eiffel tower and eating croissants. Highly recommend the Latin Quarter for food.'
+      },
+      {
+        id: 2,
+        title: 'Question about Tokyo transit',
+        author: 'Mike R.',
+        avatar: '',
+        likes: 5,
+        comments: 8,
+        date: '2025-01-01',
+        excerpt: 'Is the JR Pass still worth it for a 7 day trip? Planning to visit Tokyo, Kyoto, and Osaka.'
+      }
+    ];
   });
 
-  useEffect(() => {
-    fetchPublicTrips();
-  }, []);
+  // Save to localStorage whenever posts change
+  React.useEffect(() => {
+    localStorage.setItem('community_posts', JSON.stringify(posts));
+  }, [posts]);
 
-  const fetchPublicTrips = async () => {
-    try {
-      const response = await api.get('/trips/public');
-      setPublicTrips(response.data);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching public trips:', error);
-      // Mock data for demonstration
-      setPublicTrips([
-        {
-          id: 1,
-          name: 'European Adventure',
-          description: 'A 2-week journey through Paris, Rome, and Barcelona',
-          user_name: 'John Doe',
-          start_date: '2024-06-01',
-          end_date: '2024-06-15',
-          stops_count: 3,
-          total_budget: 2500
-        },
-        {
-          id: 2,
-          name: 'Asian Discovery',
-          description: 'Exploring Tokyo, Bangkok, and Singapore',
-          user_name: 'Jane Smith',
-          start_date: '2024-07-10',
-          end_date: '2024-07-25',
-          stops_count: 3,
-          total_budget: 3000
-        },
-        {
-          id: 3,
-          name: 'US Road Trip',
-          description: 'Cross-country adventure from NYC to LA',
-          user_name: 'Mike Johnson',
-          start_date: '2024-08-01',
-          end_date: '2024-08-20',
-          stops_count: 5,
-          total_budget: 4000
-        }
-      ]);
-      setLoading(false);
-    }
+  const handlePostSubmit = (e) => {
+    e.preventDefault();
+    const title = e.target.elements.title.value;
+    const content = e.target.elements.content.value;
+
+    const newPost = {
+      id: Date.now(),
+      title: title,
+      author: 'You',
+      avatar: '',
+      likes: 0,
+      comments: 0,
+      date: new Date().toISOString().split('T')[0],
+      excerpt: content
+    };
+
+    setPosts([newPost, ...posts]);
+    setShowPostModal(false);
   };
 
-  const handleCopyTrip = async (tripId) => {
-    try {
-      await api.post(`/trips/${tripId}/copy`);
-      alert('Trip copied to your account!');
-      navigate('/my-trips');
-    } catch (error) {
-      console.error('Error copying trip:', error);
-      alert('Please login to copy this trip');
-    }
-  };
-
-  const filteredTrips = publicTrips.filter(trip =>
-    trip.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (trip.description && trip.description.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-white text-xl">Loading community trips...</div>
-      </div>
-    );
-  }
+  // Filter & Sort Logic
+  const filteredPosts = posts
+    .filter(post =>
+      post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      post.excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      post.author.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (sortBy === 'popular') return b.likes - a.likes;
+      return new Date(b.date) - new Date(a.date);
+    });
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      {/* Header */}
-      <header className="bg-gray-800 border-b border-gray-700">
+    <div className="min-h-screen bg-slate-900 text-white pb-20 font-sans">
+      <header className="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="text-gray-400 hover:text-white"
-            >
-              ← Back
-            </button>
-            <h1 className="text-2xl font-bold">GlobeTrotter</h1>
+          <div className="flex items-center gap-4">
+            <button onClick={() => navigate(-1)} className="p-2 rounded-lg bg-white/5 hover:bg-white/10">←</button>
+            <h1 className="text-xl font-bold">GlobalTrotter Community</h1>
           </div>
-          <div className="w-10 h-10 bg-gray-600 rounded-full"></div>
+          <button onClick={() => setShowPostModal(true)} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-bold text-sm">
+            + Share Experience
+          </button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <h2 className="text-2xl font-bold mb-6">Community tab Screen</h2>
-
-        {/* Search and Filters */}
-        <div className="bg-gray-800 rounded-lg p-4 mb-6">
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex-1 min-w-64">
-              <input
-                type="text"
-                placeholder="Search bar ......"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400"
-              />
-            </div>
-            <button className="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white">
-              Group by
-            </button>
-            <button className="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white">
-              Filter
-            </button>
-            <button className="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white">
-              Sort by...
-            </button>
+      <main className="max-w-4xl mx-auto px-4 py-8 relative z-10">
+        {/* Controls Bar */}
+        <div className="glass-card p-4 rounded-xl mb-8 flex flex-col md:flex-row gap-4 items-center border border-white/10">
+          <input
+            type="text"
+            placeholder="Search community stories..."
+            className="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <div className="flex gap-2">
+            <select
+              className="px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg hover:bg-slate-700 font-medium text-sm appearance-none cursor-pointer focus:outline-none"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+            >
+              <option value="newest">Sort by: Newest</option>
+              <option value="popular">Sort by: Popular</option>
+            </select>
           </div>
         </div>
 
-        {/* Description */}
-        <div className="bg-gray-700 rounded-lg p-4 mb-6 text-sm text-gray-300">
-          <p className="font-semibold mb-2">Community section where all the users can share their experience about a certain trip or activity.</p>
-          <p>Using the search, groupby or filter and sortby option, the user can narrow down the result that he is looking for...</p>
-        </div>
+        {/* Post List (Wireframe Style: Avatar Left, Content Right) */}
+        <div className="space-y-4">
+          {filteredPosts.length > 0 ? filteredPosts.map(post => (
+            <div key={post.id} className="glass-card p-6 rounded-xl border border-white/5 hover:border-indigo-500/30 transition-all flex gap-6 items-start">
 
-        {/* Community Tab Content */}
-        <div className="bg-gray-800 rounded-lg p-4">
-          <h3 className="text-lg font-semibold mb-4">Community tab</h3>
-          
-          <div className="space-y-4">
-            {filteredTrips.length > 0 ? (
-              filteredTrips.map((trip) => (
-                <div
-                  key={trip.id}
-                  className="flex items-start space-x-4 bg-gray-700 rounded-lg p-4 hover:bg-gray-600 transition-colors"
-                >
-                  {/* User Avatar */}
-                  <div className="flex-shrink-0">
-                    <div className="w-12 h-12 bg-gray-500 rounded-full"></div>
-                  </div>
+              {/* Avatar Circle */}
+              <div className="w-16 h-16 rounded-full bg-slate-700 flex-shrink-0 flex items-center justify-center border-2 border-white/10 overflow-hidden">
+                {post.avatar ? (
+                  <img src={post.avatar} alt={post.author} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-2xl">👤</span>
+                )}
+              </div>
 
-                  {/* Trip Content */}
-                  <div className="flex-1">
-                    <div className="bg-gray-600 rounded-lg p-4">
-                      <h4 className="font-semibold text-lg">{trip.name}</h4>
-                      <p className="text-gray-400 text-sm mt-1">by {trip.user_name}</p>
-                      <p className="text-gray-300 mt-2">{trip.description}</p>
-                      
-                      <div className="flex flex-wrap gap-4 mt-3 text-sm text-gray-400">
-                        <span>📅 {new Date(trip.start_date).toLocaleDateString()} - {new Date(trip.end_date).toLocaleDateString()}</span>
-                        <span>📍 {trip.stops_count} stops</span>
-                        <span>💰 ${trip.total_budget}</span>
-                      </div>
+              {/* Content */}
+              <div className="flex-1">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="text-xl font-bold text-white mb-1">{post.title}</h3>
+                  <span className="text-xs text-gray-500">{post.date}</span>
+                </div>
+                <p className="text-gray-300 text-sm mb-4 leading-relaxed">{post.excerpt}</p>
 
-                      <div className="flex space-x-3 mt-4">
-                        <button
-                          onClick={() => navigate(`/trip/${trip.id}/public`)}
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm"
-                        >
-                          View Itinerary
-                        </button>
-                        <button
-                          onClick={() => handleCopyTrip(trip.id)}
-                          className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm"
-                        >
-                          Copy Trip
-                        </button>
-                        <button className="px-4 py-2 bg-gray-500 hover:bg-gray-400 rounded-lg text-sm">
-                          Share
-                        </button>
-                      </div>
-                    </div>
+                <div className="flex items-center justify-between border-t border-white/5 pt-3 mt-2">
+                  <span className="text-sm text-indigo-400 font-medium">{post.author}</span>
+                  <div className="flex gap-4 text-xs text-gray-500">
+                    <span className="flex items-center gap-1 hover:text-gray-300 cursor-pointer">👍 {post.likes}</span>
+                    <span className="flex items-center gap-1 hover:text-gray-300 cursor-pointer">💬 {post.comments}</span>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="text-center text-gray-400 py-8">
-                No public trips found
               </div>
-            )}
-          </div>
+            </div>
+          )) : (
+            <div className="text-center py-20 text-gray-500">
+              <p className="text-xl">No posts found.</p>
+            </div>
+          )}
         </div>
       </main>
+
+      {/* Post Modal */}
+      {showPostModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="glass-card w-full max-w-lg p-6 rounded-2xl border border-white/10 relative">
+            <button onClick={() => setShowPostModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white">✕</button>
+            <h2 className="text-2xl font-bold mb-4">Share Experience</h2>
+            <form onSubmit={handlePostSubmit}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">Title</label>
+                  <input name="title" type="text" required className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-indigo-500 focus:outline-none" placeholder="Trip title..." />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">Details</label>
+                  <textarea name="content" required rows="4" className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-indigo-500 focus:outline-none" placeholder="Share your experience..."></textarea>
+                </div>
+                <button type="submit" className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-bold mt-2">Post</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

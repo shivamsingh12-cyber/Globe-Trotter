@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { tripAPI, cityAPI } from '../services/api';
+import { getTripImage } from '../utils/imageUtils';
 
 const Dashboard = () => {
   const [trips, setTrips] = useState([]);
@@ -11,8 +12,12 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (user && user.is_admin) {
+      navigate('/admin');
+      return;
+    }
     fetchDashboardData();
-  }, []);
+  }, [user, navigate]);
 
   const fetchDashboardData = async () => {
     try {
@@ -113,6 +118,8 @@ const Dashboard = () => {
               </div>
               <span className="hidden md:inline">{user?.first_name || 'Profile'}</span>
             </button>
+            <button onClick={() => navigate('/community')} className="px-4 py-2 rounded-lg hover:bg-white/10 transition-colors">Community</button>
+            <button onClick={() => navigate('/calendar')} className="px-4 py-2 rounded-lg hover:bg-white/10 transition-colors">Calendar</button>
             <button
               onClick={handleLogout}
               className="px-4 py-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors"
@@ -127,8 +134,8 @@ const Dashboard = () => {
       <main className="max-w-7xl mx-auto px-4 py-8 relative z-10">
 
         {/* Welcome Section */}
-        <div className="relative glass-card rounded-2xl p-8 md:p-12 mb-12 overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 group-hover:opacity-100 transition-opacity"></div>
+        <div className="relative glass-card rounded-2xl p-8 md:p-12 mb-12 overflow-hidden group" style={{ backgroundImage: 'url(/images/dashboard-cover.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+          <div className="absolute inset-0 bg-slate-900/60 group-hover:bg-slate-900/50 transition-colors"></div>
           <div className="absolute right-0 top-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
 
           <div className="relative z-10 max-w-2xl">
@@ -154,7 +161,7 @@ const Dashboard = () => {
             <span className="pl-4 text-2xl">🔍</span>
             <input
               type="text"
-              placeholder="Search bar ...."
+              placeholder="Search for cities, activities..."
               className="w-full bg-transparent border-none text-white px-4 py-3 text-lg focus:outline-none placeholder-gray-500"
               onKeyDown={(e) => e.key === 'Enter' && navigate(`/cities?search=${e.target.value}`)}
             />
@@ -235,6 +242,8 @@ const Dashboard = () => {
           </div>
         </section>
 
+
+
         {/* Previous Trips */}
         <section className="relative">
           <div className="flex justify-between items-end mb-6">
@@ -256,12 +265,12 @@ const Dashboard = () => {
                   className="glass-card rounded-2xl overflow-hidden hover:border-indigo-500/50 transition-all cursor-pointer group h-64 flex flex-col"
                 >
                   <div className="h-40 relative overflow-hidden flex-shrink-0">
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 opacity-80 group-hover:opacity-100 transition-opacity"></div>
-                    {trip.cover_photo ? (
-                      <img src={trip.cover_photo} alt={trip.name} className="w-full h-full object-cover mix-blend-overlay" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-6xl opacity-30">✈️</div>
-                    )}
+                    <img
+                      src={getTripImage(trip)}
+                      alt={trip.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-60"></div>
                   </div>
                   <div className="p-5 flex-1 flex flex-col justify-between">
                     <div>

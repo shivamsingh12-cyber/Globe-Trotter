@@ -4,29 +4,29 @@ const pool = require('../config/database');
 const getCities = async (req, res) => {
   try {
     const { search, country, region, sort_by } = req.query;
-    
+
     let query = 'SELECT * FROM cities WHERE 1=1';
     const params = [];
     let paramCount = 0;
-    
+
     if (search) {
       paramCount++;
       query += ` AND (name ILIKE $${paramCount} OR country ILIKE $${paramCount})`;
       params.push(`%${search}%`);
     }
-    
+
     if (country) {
       paramCount++;
       query += ` AND country = $${paramCount}`;
       params.push(country);
     }
-    
+
     if (region) {
       paramCount++;
       query += ` AND region = $${paramCount}`;
       params.push(region);
     }
-    
+
     // Sorting
     if (sort_by === 'popularity') {
       query += ' ORDER BY popularity_score DESC';
@@ -37,7 +37,7 @@ const getCities = async (req, res) => {
     } else {
       query += ' ORDER BY name ASC';
     }
-    
+
     const result = await pool.query(query, params);
     res.json({ cities: result.rows });
   } catch (error) {
@@ -50,23 +50,23 @@ const getCities = async (req, res) => {
 const getCityById = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const cityResult = await pool.query('SELECT * FROM cities WHERE id = $1', [id]);
-    
+
     if (cityResult.rows.length === 0) {
       return res.status(404).json({ error: 'City not found' });
     }
-    
+
     const city = cityResult.rows[0];
-    
+
     // Get activities for this city
     const activitiesResult = await pool.query(
       'SELECT * FROM activities WHERE city_id = $1 ORDER BY category, name',
       [id]
     );
-    
+
     city.activities = activitiesResult.rows;
-    
+
     res.json({ city });
   } catch (error) {
     console.error('Get city error:', error);
@@ -78,12 +78,17 @@ const getCityById = async (req, res) => {
 const getPopularCities = async (req, res) => {
   try {
     const limit = req.query.limit || 10;
-    
+
     const result = await pool.query(
-      'SELECT * FROM cities ORDER BY popularity_score DESC LIMIT $1',
+      `SELECT c.*, COUNT(ts.id)::int as visit_count 
+       FROM cities c 
+       LEFT JOIN trip_stops ts ON c.id = ts.city_id 
+       GROUP BY c.id 
+       ORDER BY popularity_score DESC 
+       LIMIT $1`,
       [limit]
     );
-    
+
     res.json({ cities: result.rows });
   } catch (error) {
     console.error('Get popular cities error:', error);
@@ -97,7 +102,7 @@ const getCountries = async (req, res) => {
     const result = await pool.query(
       'SELECT DISTINCT country FROM cities ORDER BY country'
     );
-    
+
     res.json({ countries: result.rows.map(row => row.country) });
   } catch (error) {
     console.error('Get countries error:', error);
