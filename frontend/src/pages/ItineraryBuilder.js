@@ -30,7 +30,8 @@ const ItineraryBuilder = () => {
     try {
       const response = await api.get(`/trips/${tripId}`);
       // setTrip(response.data.trip); // removed unused trip state
-      setStops(response.data.stops || []);
+      // Fix: Backend returns { trip: { stops: [...] } }
+      setStops(response.data.trip?.stops || response.data.stops || []);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching trip:', error);

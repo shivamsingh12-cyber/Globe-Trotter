@@ -40,9 +40,18 @@ const UserProfile = () => {
   const fetchUserTrips = async () => {
     try {
       const response = await api.get('/trips');
-      setTrips(response.data);
+      // Backend returns { trips: [...] } or just [...]
+      if (Array.isArray(response.data)) {
+        setTrips(response.data);
+      } else if (response.data && Array.isArray(response.data.trips)) {
+        setTrips(response.data.trips);
+      } else {
+        console.error('Unexpected trips response format:', response.data);
+        setTrips([]);
+      }
     } catch (error) {
       console.error('Error fetching trips:', error);
+      setTrips([]);
     }
   };
 
