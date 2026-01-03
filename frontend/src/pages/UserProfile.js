@@ -30,7 +30,7 @@ const UserProfile = () => {
   const fetchProfile = async () => {
     try {
       const response = await api.get('/auth/profile');
-      setProfile(response.data);
+      setProfile(response.data.user);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching profile:', error);
